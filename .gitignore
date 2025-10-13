@@ -1,0 +1,18 @@
+# 의존성 모듈
+node_modules/
+
+# 환경 변수 파일
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 운영체제 관련 파일
+Thumbs.db # Windows
+.vscode/ # VS Code 설정 (개인 선호에 따라 포함 가능)
+
+# 기타 캐시 및 임시 파일
+.npm/
+http/
+dist/

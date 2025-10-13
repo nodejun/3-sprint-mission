@@ -1,0 +1,39 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # EC2 서버에 SSH 접속하여 배포
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            # 프로젝트 디렉토리로 이동
+            cd ~/3-sprint-mission
+
+            # 최신 코드 가져오기
+            git pull origin main
+
+            # 의존성 설치
+            npm install
+
+            # Prisma 클라이언트 생성
+            npx prisma generate
+
+            # DB 마이그레이션 실행
+            npx prisma migrate deploy
+
+            # TypeScript 빌드
+            npm run build
+
+            # PM2로 앱 무중단 재시작
+            pm2 reload ecosystem.config.js --env production

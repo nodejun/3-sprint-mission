@@ -1,4 +1,4 @@
-name: Test    # 워크플로우 이름
+name: Test
 
 on:
   push:
@@ -9,26 +9,61 @@ on:
 jobs:
   kimcode-test:
     runs-on: ubuntu-latest
-    
+
+    # PostgreSQL 서비스 컨테이너 (테스트용 DB 자동 생성)
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        # DB 준비 완료까지 대기
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      # 1단계: 코드 가져오기
+      # 코드 가져오기
       - name: Checkout code
         uses: actions/checkout@v5
-      
-      # 2단계: Node.js 설치
+
+      # Node.js 설치
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 'lts/*'
-      
-      # 3단계: 패키지 설치
+
+      # 패키지 설치
       - name: Install dependencies
         run: npm install
-      
-      # 4단계: 타입 체크
+
+      # TypeScript 타입 체크
       - name: Type Check
         run: npm run typecheck
-      
-      # 5단계: 테스트 실행
+
+      # DB 스키마 생성 (테이블 생성)
+      - name: Run Prisma Migrations
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb?schema=public
+        run: npx prisma migrate deploy
+
+      # 테스트 데이터 삽입
+      - name: Seed Database
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb?schema=public
+        run: npm run prisma:seed
+
+      # 테스트 실행
       - name: Run Tests
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb?schema=public
+          NODE_ENV: test
+          PORT: 3000
+          ACCESS_TOKEN_SECRET: test_access_token_secret_key_for_ci
+          REFRESH_TOKEN_SECRET: test_refresh_token_secret_key_for_ci
         run: npm run test
